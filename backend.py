@@ -44,13 +44,14 @@ class Backend:
 
     self.database = "log.db"
 
-    self.initDB() 
- 
+    self.initDB()
+
     self.netThread = Thread(target=self.netListener())
     self.netThread.start()
 
+    
 
-  def netListener(self:
+  def netListener(self):
 
     TCP_IP = '127.0.0.1'
     TCP_PORT = 7373
@@ -63,18 +64,24 @@ class Backend:
     conn, addr = s.accept()
     while 1:
       #get the stuff from the network, strip off the command and do the thing
-      procData(conn.recv(BUFFER_SIZE))
-      #options are log QSO, edit QSO, delete QSO
-
+      data = conn.recv(BUFFER_SIZE)
+      #options are log QSO, edit QSO, delete QSO, delivered as tuple
+      #(logqso,[qso_id,list,of,qso,data])
+      #(editqso,[qso_id,list,of,qso,data]) - should be full qso data again
+      #(delqso,[qso_id]
+      if data[0] == 'logqso':
+        logQSO()
+      else:
+        continue
     conn.close()
 
-  def procData(self,data):
-#    returns tuple of the [action,restofdata]
+  def logQSO(self,data):
 
   def qsoString(self):
     logstring = "{0},{1},{2},{3},{4},{5},{6},{7},{8},{9},{10},{11},{12},{13},{14},
-                 {15},{16},{17},{18},{19},{20},{21},{22},{23},{24},{25},{26}\n".format(
-                 self.qso_id,self.time,self.band,send.theircall,self.mycall,
+                 {15},{16},{17},{18},{19},{20},{21},{22},{23},{24},{25},{26},{27},
+                 {28}\n".format(
+                 self.qso_id,self.time,self.band,self.theircall,self.mycall,
                  self.theircall,self.mycall,self.theirexch,self.txfreq,self.rxfreq,
                  self.mode,self.dxcc,self.theirname,self.country,self.state,
                  self.county,self.cqzone,self.ituzone,self.xcvr,self.antenna,
@@ -85,41 +92,61 @@ class Backend:
 
 
   def initDB(self,database):
+   
+    #split to multiple tables:
+    #qsos contains id, band, callsign, mode, date/time
+    #qso_extended contains every other qso detail
+    #qsl table shows whether I've qsl'd in what media, and if it's been confirmed
     
     create_table_qsos = """CREATE TABLE IF NOT EXISTS qsos (
-        id TEXT PRIMARY KEY,
-        txfreq TEXT NOT NULL,
-        rxfreq TEXT NOT NULL,
+        id TEXT PRIMARY KEY NOT NULL,
         band TEXT NOT NULL,
         mode TEXT NOT NULL,
         time TEXT NOT NULL,
-        mycall TEXT NOT NULL,
-        myexchange TEXT NOT NULL,
         theircall TEXT NOT NULL,
-        theirexchange TEXT NOT NULL,
-        opcall TEXT NOT NULL,
-        dxcc TEXT NOT NULL,
-        theirname TEXT NOT NULL,
-        country TEXT NOT NULL,
-        state TEXT NOT NULL,
-        county TEXT NOT NULL,
-        cqzone TEXT NOT NULL,
-        ituzone TEXT NOT NULL,
-        xcvr TEXT NOT NULL,
-        antenna TEXT NOT NULL,
-        power TEXT NOT NULL,
-        myqth TEXT NOT NULL,
-        satellite TEXT NOT NULL,
-        mysummit TEXT NOT NULL,
-        theirsummit TEXT NOT NULL,
-        iota TEXT NOT NULL,
-        clubs TEXT NOT NULL,
-        notes TEXT NOT NULL
         );"""
+ 
+    create_table_extended_qsos = """CREATE TABLE IF NOT EXISTS extended_qsos (
+        id TEXT PRIMARY KEY NOT NULL,
+        txfreq TEXT NOT NULL,
+        rxfreq TEXTL,
+        mycall TEXT NOT NULL,
+        myexchange TEXT,
+        theirexchange TEXT,
+        opcall TEXT,
+        dxcc TEXT,
+        theirname TEXT,
+        country TEXT,
+        state TEXT,
+        county TEXT,
+        cqzone TEXT,
+        ituzone TEXT,
+        xcvr TEXT,
+        antenna TEXT,
+        power TEXT,
+        myqth TEXT,
+        satellite TEXT,
+        mysummit TEXT,
+        theirsummit TEXT,
+        iota TEXT,
+        clubs TEXT,
+        notes TEXT
+        );"""
+
+    create_table_qsl = """CREATE TABLE IF NOT EXISTS qsl (
+        id TEXT PRIMARY KEY NOT NULL,
+        lotwsent INT,
+        lotwrecv INT,
+        eqslsent INT,
+        eqslrecv INT,
+        clublogsent INT
+    );"""
 
     self.conn = sqlite3.connect(database)
     self.cur = conn.cursor()
     self.cur.execute(create_table_qsos)
+    self.cur.execute(create_table_extended_qsos)
+    self.cur.execute(create_table_qsl)
 
   def getBand(self,freq):
     #if freq is blablabla band = 
