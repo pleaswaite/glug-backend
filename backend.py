@@ -14,7 +14,7 @@ class Backend:
                dxcc,theirname,country,state,county,cqzone,ituzone,xcvr,
                antenna,power,myqth,operator,satellite,mysummit,theirsummit,
                iota,clubs,notes):
-    self.qso_id = hashlib.md5().hexdigest()
+    self.qso_id = hashlib.md5(stuffgoeshere).hexdigest()
     self.time = strftime("%Y-%m-%d %H%M",gmtime())
     self.band = self.getBand(txfreq)
     self.theircall = theircall
@@ -43,13 +43,17 @@ class Backend:
     self.notes = notes
 
     self.database = "log.db"
+    
+    self.dataQueue = Queue.Queue()
 
     self.initDB()
 
     self.netThread = Thread(target=self.netListener())
     self.netThread.start()
 
-    
+    self.queueThread = Thread(target=queueHandler()
+    self.queueThread.start()
+
 
   def netListener(self):
 
@@ -69,13 +73,46 @@ class Backend:
       #(logqso,[qso_id,list,of,qso,data])
       #(editqso,[qso_id,list,of,qso,data]) - should be full qso data again
       #(delqso,[qso_id]
-      if data[0] == 'logqso':
-        logQSO()
-      else:
-        continue
+      dataQueue.put(data)
     conn.close()
 
-  def logQSO(self,data):
+  def queueHandler():
+    while 1:
+      while not dataQueue.empty():
+        data = dataQueue.get()
+        if data[0] is "logqso":
+          #write the qso to the db
+          band = getBand(data[1][2])
+
+          logquery = """INSERT INTO qsos (
+          id,band,mode,time,theircall)
+          VALUES ({0},{1},{2},{3},{4}); 
+          """.format(data[1][0],band,data[1][10],data[1][1],data[1][3])
+
+          extlogquery = """INSERT INTO extended_qsos (
+          id,txfreq,rxfreq,mycall,myexchange,theirexchange,opcall,dxcc,theirname,
+          country,state,county,cqzone,ituzone,xcvr,antenna,power,myqth,satellite,
+          theirsummit,mysummit,iota,clubs,notes) VALUES({0},{1},{2},{3},{4},{5},
+          {6},{7},{8},{9},{10},{11},{12},{13},{14},{15},{16},{17},{18},{19},{20},
+          {21},{22},{23}); 
+          """.format(data[1][0],data[1][8],data[1][9],data[1][4],data[1][22],
+          data[1][11],data[1][12],data[1][13],data[1][14],data[1][15],data[1]16],
+          data[1][17],data[1][18],data[1][19],data[1][20],data[1][21],data[1][23],
+          data[1][25],data[1][24],data[1][26],data[1][27],data[1][28])
+
+          qslquery = """INSERT INTO qsl ( id,lotwsent, lotwrecv, eqslsent, 
+          eqslrecv, clublogsent) VALUES ({0},0,0,0,0,0);
+          """.format(data[1][0])
+
+          self.cur.execute(logquery)          
+          self.cur.execute(extlogquery)
+          self.cur.execute(qslquery)
+        elif data[0] is "editqso":
+          #edit the qso
+          continue
+        elif data[0] is "delqso":
+          #delete the qso
+          continue
 
   def qsoString(self):
     logstring = "{0},{1},{2},{3},{4},{5},{6},{7},{8},{9},{10},{11},{12},{13},{14},
