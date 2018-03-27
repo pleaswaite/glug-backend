@@ -58,7 +58,7 @@ class Backend:
   def netListener(self):
 
     TCP_IP = '127.0.0.1'
-    TCP_PORT = 7373
+    TCP_PORT = 7388
     BUFFER_SIZE = 512
 
     s = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
@@ -118,7 +118,7 @@ class Backend:
     logstring = "{0},{1},{2},{3},{4},{5},{6},{7},{8},{9},{10},{11},{12},{13},{14},
                  {15},{16},{17},{18},{19},{20},{21},{22},{23},{24},{25},{26},{27},
                  {28}\n".format(
-                 self.qso_id,self.time,self.band,self.theircall,self.mycall,
+                 self.qso_id,self.time,getBand(self.txfreq),self.theircall,self.mycall,
                  self.theircall,self.mycall,self.theirexch,self.txfreq,self.rxfreq,
                  self.mode,self.dxcc,self.theirname,self.country,self.state,
                  self.county,self.cqzone,self.ituzone,self.xcvr,self.antenna,
